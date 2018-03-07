@@ -10,7 +10,12 @@
         <version>0.0.1-SNAPSHOT</version>
     </parent>
 
-    <groupId>com.aws.sample.amazonmqintegration</groupId>
-    <artifactId>plain-java</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <groupId>com.aws.sample.amazon-mq-integration</groupId>
+    <artifactId>lambda-proxy</artifactId>
+    <name>amazon-mq-integration :: lambda-proxy</name>
+    <packaging>pom</packaging>
+
+    <modules>
+        <module>publish-subscribe-one-way-cloud-native</module>
+    </modules>
 </project>

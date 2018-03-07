@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<project
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd"
+    xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.aws.sample</groupId>
+        <artifactId>amazon-mq-integration</artifactId>
+        <version>0.0.1-SNAPSHOT</version>
+    </parent>
+
+    <groupId>com.aws.sample.amazon-mq-integration</groupId>
+    <artifactId>plain-java-proxy</artifactId>
+    <name>amazon-mq-integration :: plain-java-proxy</name>
+    <packaging>pom</packaging>
+
+    <modules>
+        <module>point-to-point-one-way-cloud-native</module>
+        <module>point-to-point-one-way-traditional</module>
+        <module>point-to-point-request-response-cloud-native</module>
+        <module>point-to-point-request-response-traditional</module>
+        <module>publish-subscribe-one-way-traditional</module>
+        <module>publish-subscribe-request-response-cloud-native</module>
+        <module>publish-subscribe-request-response-traditional</module>
+    </modules>
+</project>

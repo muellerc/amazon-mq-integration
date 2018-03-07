@@ -3,16 +3,34 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.aws.sample</groupId>
     <artifactId>amazon-mq-integration</artifactId>
+    <name>amazon-mq-integration</name>
     <version>0.0.1-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <properties>
+        <java.version>1.8</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
     <modules>
-        <module>apache-camel</module>
-        <module>aws-lambda</module>
-        <module>plain-java</module>
+        <!-- <module>camel-proxy</module> -->
+        <module>lambda-proxy</module>
+        <module>plain-java-proxy</module>
     </modules>
+
+    <build>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <version>3.7.0</version>
+                    <configuration>
+                        <source>${java.version}</source>
+                        <target>${java.version}</target>
+                    </configuration>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+    </build>
 </project>
