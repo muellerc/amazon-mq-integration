@@ -56,7 +56,7 @@ public class PublishSubscribeRequestResponseTraditional {
         ActiveMQSslConnectionFactory connFact = new ActiveMQSslConnectionFactory(conf.get(BROKER_ENDPOINT));
         connFact.setConnectResponseTimeout(10000);
         Connection conn = connFact.createConnection(conf.get(BROKER_USER), conf.get(BROKER_PASSWORD));
-        conn.setClientID("PublishSubscribeRequestResponseTraditionalProxy");
+        conn.setClientID("PublishSubscribeRequestResponseTraditionalResponseProxy");
         conn.start();
         Session session = conn.createSession(false, Session.CLIENT_ACKNOWLEDGE);
 
