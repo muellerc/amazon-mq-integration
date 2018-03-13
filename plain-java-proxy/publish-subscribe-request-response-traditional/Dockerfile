@@ -6,7 +6,7 @@ RUN yum install -y java-1.8.0
 
 # Provision the Proxy
 VOLUME /tmp
-ADD target/point-to-point-request-response-traditional.jar app.jar
+ADD target/publish-subscribe-request-response-traditional.jar app.jar
 
 # Run the Proxy
 ENTRYPOINT ["java", "-jar", "app.jar"]

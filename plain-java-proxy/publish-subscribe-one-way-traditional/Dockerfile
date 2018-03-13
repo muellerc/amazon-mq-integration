@@ -2,7 +2,7 @@ FROM amazonlinux:2017.12
 
 # Install dependencies
 RUN yum update -y
-RUN yum install -y aws-cli java-1.8.0
+RUN yum install -y java-1.8.0
 
 # Provision the Proxy
 VOLUME /tmp
