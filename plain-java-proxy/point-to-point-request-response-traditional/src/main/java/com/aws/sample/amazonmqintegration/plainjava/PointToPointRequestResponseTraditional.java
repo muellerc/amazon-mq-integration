@@ -104,7 +104,9 @@ public class PointToPointRequestResponseTraditional {
     
                 System.out.println("forwarded message with message id: " + msg.getMessageId());
 
-                sqsClient.deleteMessage(new DeleteMessageRequest());
+                sqsClient.deleteMessage(new DeleteMessageRequest().
+                    withQueueUrl(conf.get(SQS_ENDPOINT_RESPONSE))
+                    .withReceiptHandle(msg.getReceiptHandle()));
             }
         }
     }
@@ -112,7 +114,9 @@ public class PointToPointRequestResponseTraditional {
     private static Map<String, String> lookupServiceConfiguration() {
         Map<String, String> serviceConfiguration = new HashMap<>();
         lookupServiceConfiguration(AMAZON_MQ_CONFIGURATION, serviceConfiguration);
-        lookupServiceConfiguration(SQS_CONFIGURATION, serviceConfiguration);
+        lookupServiceConfiguration(AMAZON_MQ_CONFIGURATION + "/ENDPOINT", serviceConfiguration);
+        lookupServiceConfiguration(AMAZON_MQ_CONFIGURATION + "/QUEUE", serviceConfiguration);
+        lookupServiceConfiguration(SQS_CONFIGURATION + "/ENDPOINT", serviceConfiguration);
 
         return serviceConfiguration;
     }
@@ -123,7 +127,6 @@ public class PointToPointRequestResponseTraditional {
         GetParametersByPathResult result = ssmClient.getParametersByPath(
             new GetParametersByPathRequest()
                 .withMaxResults(Integer.valueOf(10))
-                .withRecursive(Boolean.TRUE)
                 .withPath(configurationPrefix));
 
         for (Parameter parameter : result.getParameters()) {

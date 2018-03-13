@@ -76,6 +76,8 @@ public class PublishSubscribeRequestResponseCloudNative implements RequestHandle
     private static Map<String, String> lookupServiceConfiguration() {
         Map<String, String> serviceConfiguration = new HashMap<>();
         lookupServiceConfiguration(AMAZON_MQ_CONFIGURATION, serviceConfiguration);
+        lookupServiceConfiguration(AMAZON_MQ_CONFIGURATION + "/ENDPOINT", serviceConfiguration);
+        lookupServiceConfiguration(AMAZON_MQ_CONFIGURATION + "/TOPIC", serviceConfiguration);
 
         return serviceConfiguration;
     }

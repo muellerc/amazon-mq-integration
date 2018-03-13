@@ -79,7 +79,9 @@ public class PublishSubscribeOneWayTraditional {
     private static Map<String, String> lookupServiceConfiguration() {
         Map<String, String> serviceConfiguration = new HashMap<>();
         lookupServiceConfiguration(AMAZON_MQ_CONFIGURATION, serviceConfiguration);
-        lookupServiceConfiguration(SNS_CONFIGURATION, serviceConfiguration);
+        lookupServiceConfiguration(AMAZON_MQ_CONFIGURATION + "/ENDPOINT", serviceConfiguration);
+        lookupServiceConfiguration(AMAZON_MQ_CONFIGURATION + "/TOPIC", serviceConfiguration);
+        lookupServiceConfiguration(SNS_CONFIGURATION + "/ENDPOINT", serviceConfiguration);
 
         return serviceConfiguration;
     }
@@ -90,7 +92,6 @@ public class PublishSubscribeOneWayTraditional {
         GetParametersByPathResult result = ssmClient.getParametersByPath(
             new GetParametersByPathRequest()
                 .withMaxResults(Integer.valueOf(10))
-                .withRecursive(Boolean.TRUE)
                 .withPath(configurationPrefix));
 
         for (Parameter parameter : result.getParameters()) {
