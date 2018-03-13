@@ -6,12 +6,11 @@ import java.util.Map;
 import javax.jms.Connection;
 import javax.jms.JMSException;
 import javax.jms.Message;
-import javax.jms.MessageConsumer;
 import javax.jms.MessageListener;
 import javax.jms.MessageProducer;
-import javax.jms.Queue;
 import javax.jms.Session;
 import javax.jms.TextMessage;
+import javax.jms.TopicSubscriber;
 
 import org.apache.activemq.ActiveMQSslConnectionFactory;
 
@@ -21,15 +20,16 @@ import com.amazonaws.services.simplesystemsmanagement.model.GetParameterRequest;
 import com.amazonaws.services.simplesystemsmanagement.model.GetParametersByPathRequest;
 import com.amazonaws.services.simplesystemsmanagement.model.GetParametersByPathResult;
 import com.amazonaws.services.simplesystemsmanagement.model.Parameter;
+import com.amazonaws.services.sns.AmazonSNS;
+import com.amazonaws.services.sns.AmazonSNSClientBuilder;
+import com.amazonaws.services.sns.model.PublishRequest;
 import com.amazonaws.services.sqs.AmazonSQS;
 import com.amazonaws.services.sqs.AmazonSQSClientBuilder;
 import com.amazonaws.services.sqs.model.DeleteMessageRequest;
-import com.amazonaws.services.sqs.model.MessageAttributeValue;
 import com.amazonaws.services.sqs.model.ReceiveMessageRequest;
 import com.amazonaws.services.sqs.model.ReceiveMessageResult;
-import com.amazonaws.services.sqs.model.SendMessageRequest;
 
-public class PointToPointRequestResponseCloudNative {
+public class PublishSubscribeRequestResponseTraditional {
 
     private static final String SERVICE_CONFIGURATION_PREFIX = "/PROD/INTEGRATION-APP";
 
@@ -37,29 +37,30 @@ public class PointToPointRequestResponseCloudNative {
     private static final String BROKER_USER = AMAZON_MQ_CONFIGURATION + "/USER";
     private static final String BROKER_PASSWORD = AMAZON_MQ_CONFIGURATION + "/PASSWORD";
     private static final String BROKER_ENDPOINT = AMAZON_MQ_CONFIGURATION + "/ENDPOINT/OPEN-WIRE";
-    private static final String BROKER_QUEUE = AMAZON_MQ_CONFIGURATION + "/QUEUE/POINT-TO-POINT-REQUEST-RESPONSE-CLOUD-NATIVE";
-    private static final String BROKER_QUEUE_RESPONSE = AMAZON_MQ_CONFIGURATION + "/QUEUE/POINT-TO-POINT-REQUEST-RESPONSE-CLOUD-NATIVE-RESPONSE";
+    private static final String BROKER_TOPIC = AMAZON_MQ_CONFIGURATION + "/TOPIC/PUBLISH-SUBSCRIBE-REQUEST-RESPONSE-TRADITIONAL";
+
+    private static final String SNS_CONFIGURATION = SERVICE_CONFIGURATION_PREFIX + "/SNS";
+    private static final String SNS_ENDPOINT = SNS_CONFIGURATION + "/ENDPOINT/PUBLISH-SUBSCRIBE-REQUEST-RESPONSE-TRADITIONAL";
 
     private static final String SQS_CONFIGURATION = SERVICE_CONFIGURATION_PREFIX + "/SQS";
-    private static final String SQS_ENDPOINT = SQS_CONFIGURATION + "/ENDPOINT/POINT-TO-POINT-REQUEST-RESPONSE-CLOUD-NATIVE";
-    private static final String SQS_ENDPOINT_RESPONSE = SQS_CONFIGURATION + "/ENDPOINT/POINT-TO-POINT-REQUEST-RESPONSE-CLOUD-NATIVE-RESPONSE";
+    private static final String SQS_ENDPOINT_RESPONSE = SQS_CONFIGURATION + "/ENDPOINT/PUBLISH-SUBSCRIBE-REQUEST-RESPONSE-TRADITIONAL-RESPONSE";
 
     public static void main(String... args) throws Exception {
         // we are using AWS Simple Systems Management Parameter Store to store our configuration in a central and secure place
         final Map<String, String> conf = lookupServiceConfiguration();
 
+        final AmazonSQS sqsClient = AmazonSQSClientBuilder.standard().build();
+
+        final AmazonSNS snsClient = AmazonSNSClientBuilder.standard().build();
+
         ActiveMQSslConnectionFactory connFact = new ActiveMQSslConnectionFactory(conf.get(BROKER_ENDPOINT));
         connFact.setConnectResponseTimeout(10000);
         Connection conn = connFact.createConnection(conf.get(BROKER_USER), conf.get(BROKER_PASSWORD));
-        conn.setClientID("PointToPointRequestResponseCloudNativeProxy");
+        conn.setClientID("PublishSubscribeRequestResponseTraditionalProxy");
         conn.start();
         Session session = conn.createSession(false, Session.CLIENT_ACKNOWLEDGE);
-        MessageProducer messageProducer = session.createProducer(session.createQueue(conf.get(BROKER_QUEUE)));
-        Queue responseQueue = session.createQueue(conf.get(BROKER_QUEUE_RESPONSE));
-        MessageConsumer consumer = session.createConsumer(responseQueue);
 
-        final AmazonSQS sqsClient = AmazonSQSClientBuilder.standard().build();
-
+        TopicSubscriber consumer = session.createDurableSubscriber(session.createTopic(conf.get(BROKER_TOPIC)), "PublishSubscribeRequestResponseTraditionalDurableSubscriber");
         consumer.setMessageListener(new MessageListener() {
             public void onMessage(Message message) {
                 try {
@@ -68,11 +69,11 @@ public class PointToPointRequestResponseCloudNative {
 
                         System.out.println("received message with correlation id: " + msg.getJMSCorrelationID());
 
-                        sqsClient.sendMessage(
-                            new SendMessageRequest()
-                                .withQueueUrl(conf.get(SQS_ENDPOINT_RESPONSE))
-                                .withMessageBody(msg.getText())
-                                .addMessageAttributesEntry("JMSCorrelationID", new MessageAttributeValue().withDataType("String").withStringValue(msg.getJMSCorrelationID())));
+                        snsClient.publish(new PublishRequest()
+                            .withTopicArn(conf.get(SNS_ENDPOINT))
+                            .withMessage(msg.getText())
+                            .addMessageAttributesEntry("JMSCorrelationID", new com.amazonaws.services.sns.model.MessageAttributeValue().withDataType("String").withStringValue(msg.getJMSCorrelationID()))
+                            .addMessageAttributesEntry("JMSReplyTo", new com.amazonaws.services.sns.model.MessageAttributeValue().withDataType("String").withStringValue(msg.getJMSReplyTo().toString())));
 
                         msg.acknowledge();
                         System.out.println("forwarded message with correlation id: " + msg.getJMSCorrelationID());
@@ -87,7 +88,9 @@ public class PointToPointRequestResponseCloudNative {
 
         while (true) {
             ReceiveMessageResult receiveMessageResult = sqsClient.receiveMessage(new ReceiveMessageRequest()
-                .withQueueUrl(conf.get(SQS_ENDPOINT))
+                .withQueueUrl(conf.get(SQS_ENDPOINT_RESPONSE))
+                .withAttributeNames("All")
+                .withMessageAttributeNames("All")
                 .withWaitTimeSeconds(20));
 
             for (com.amazonaws.services.sqs.model.Message msg : receiveMessageResult.getMessages()) {
@@ -95,17 +98,19 @@ public class PointToPointRequestResponseCloudNative {
 
                 TextMessage message = session.createTextMessage(msg.getBody());
                 message.setJMSMessageID(msg.getMessageId());
-                message.setJMSReplyTo(responseQueue);
                 if (msg.getMessageAttributes().get("JMSCorrelationID") != null) {
                     message.setJMSCorrelationID(msg.getMessageAttributes().get("JMSCorrelationID").getStringValue());
                 }
+
+                MessageProducer messageProducer = session.createProducer(session.createQueue(msg.getMessageAttributes().get("JMSReplyTo").getStringValue()));
                 messageProducer.send(message);
+                messageProducer.close();
     
                 System.out.println("forwarded message with message id: " + msg.getMessageId());
 
                 sqsClient.deleteMessage(new DeleteMessageRequest()
-                        .withQueueUrl(conf.get(SQS_ENDPOINT))
-                        .withReceiptHandle(msg.getReceiptHandle()));
+                    .withQueueUrl(conf.get(SQS_ENDPOINT_RESPONSE))
+                    .withReceiptHandle(msg.getReceiptHandle()));
             }
         }
     }
@@ -113,6 +118,7 @@ public class PointToPointRequestResponseCloudNative {
     private static Map<String, String> lookupServiceConfiguration() {
         Map<String, String> serviceConfiguration = new HashMap<>();
         lookupServiceConfiguration(AMAZON_MQ_CONFIGURATION, serviceConfiguration);
+        lookupServiceConfiguration(SNS_CONFIGURATION, serviceConfiguration);
         lookupServiceConfiguration(SQS_CONFIGURATION, serviceConfiguration);
 
         return serviceConfiguration;

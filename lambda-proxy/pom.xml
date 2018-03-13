@@ -17,5 +17,6 @@
 
     <modules>
         <module>publish-subscribe-one-way-cloud-native</module>
+        <module>publish-subscribe-request-response-cloud-native</module>
     </modules>
 </project>

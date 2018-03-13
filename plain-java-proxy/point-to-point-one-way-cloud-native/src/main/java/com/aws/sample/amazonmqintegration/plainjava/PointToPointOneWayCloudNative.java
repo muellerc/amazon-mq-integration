@@ -24,12 +24,16 @@ import com.amazonaws.services.sqs.model.ReceiveMessageResult;
 
 public class PointToPointOneWayCloudNative {
 
-    private static final String CONFIGURATION_PREFIX = "/PROD/INTEGRATION-APP";
-    private static final String BROKER_ENDPOINT = CONFIGURATION_PREFIX + "/BROKER-ENDPOINT-OPEN-WIRE";
-    private static final String BROKER_QUEUE = CONFIGURATION_PREFIX + "/BROKER-QUEUE-POINT-TO-POINT-ONE-WAY-CLOUD-NATIVE";
-    private static final String BROKER_USER = CONFIGURATION_PREFIX + "/BROKER-USER";
-    private static final String BROKER_PASSWORD = CONFIGURATION_PREFIX + "/BROKER-PASSWORD";
-    private static final String SQS_ENDPOINT = CONFIGURATION_PREFIX + "/SQS-ENDPOINT-POINT-TO-POINT-ONE-WAY-CLOUD-NATIVE";
+    private static final String SERVICE_CONFIGURATION_PREFIX = "/PROD/INTEGRATION-APP";
+
+    private static final String AMAZON_MQ_CONFIGURATION = SERVICE_CONFIGURATION_PREFIX + "/BROKER";
+    private static final String BROKER_USER = AMAZON_MQ_CONFIGURATION + "/USER";
+    private static final String BROKER_PASSWORD = AMAZON_MQ_CONFIGURATION + "/PASSWORD";
+    private static final String BROKER_ENDPOINT = AMAZON_MQ_CONFIGURATION + "/ENDPOINT/OPEN-WIRE";
+    private static final String BROKER_QUEUE = AMAZON_MQ_CONFIGURATION + "/QUEUE/POINT-TO-POINT-ONE-WAY-CLOUD-NATIVE";
+
+    private static final String SQS_CONFIGURATION = SERVICE_CONFIGURATION_PREFIX + "/SQS";
+    private static final String SQS_ENDPOINT = SQS_CONFIGURATION + "/ENDPOINT/POINT-TO-POINT-ONE-WAY-CLOUD-NATIVE";
 
     public static void main(String... args) throws Exception {
         // we are using AWS Simple Systems Management Parameter Store to store our configuration in a central and secure place
@@ -70,13 +74,22 @@ public class PointToPointOneWayCloudNative {
     }
 
     private static Map<String, String> lookupServiceConfiguration() {
+        Map<String, String> serviceConfiguration = new HashMap<>();
+        lookupServiceConfiguration(AMAZON_MQ_CONFIGURATION, serviceConfiguration);
+        lookupServiceConfiguration(SQS_CONFIGURATION, serviceConfiguration);
+
+        return serviceConfiguration;
+    }
+
+    private static Map<String, String> lookupServiceConfiguration(String configurationPrefix, Map<String, String> serviceConfiguration) {
         // using automatic region detection as described here: https://docs.aws.amazon.com/sdk-for-java/v1/developer-guide/java-dg-region-selection.html
         AWSSimpleSystemsManagement ssmClient = AWSSimpleSystemsManagementClientBuilder.standard().build();
         GetParametersByPathResult result = ssmClient.getParametersByPath(
             new GetParametersByPathRequest()
-                .withPath(CONFIGURATION_PREFIX));
+                .withMaxResults(Integer.valueOf(10))
+                .withRecursive(Boolean.TRUE)
+                .withPath(configurationPrefix));
 
-        Map<String, String> serviceConfiguration = new HashMap<>();
         for (Parameter parameter : result.getParameters()) {
             String key = parameter.getName();
             String value = parameter.getValue();

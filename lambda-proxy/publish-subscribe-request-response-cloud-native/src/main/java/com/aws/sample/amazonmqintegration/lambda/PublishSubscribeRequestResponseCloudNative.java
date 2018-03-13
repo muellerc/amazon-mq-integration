@@ -23,7 +23,7 @@ import com.amazonaws.services.simplesystemsmanagement.model.GetParametersByPathR
 import com.amazonaws.services.simplesystemsmanagement.model.GetParametersByPathResult;
 import com.amazonaws.services.simplesystemsmanagement.model.Parameter;
 
-public class PublishSubscribeOneWayCloudNative implements RequestHandler<SNSEvent, Void> {
+public class PublishSubscribeRequestResponseCloudNative implements RequestHandler<SNSEvent, Void> {
 
     private static final String SERVICE_CONFIGURATION_PREFIX = "/PROD/INTEGRATION-APP";
 
@@ -31,19 +31,19 @@ public class PublishSubscribeOneWayCloudNative implements RequestHandler<SNSEven
     private static final String BROKER_USER = AMAZON_MQ_CONFIGURATION + "/USER";
     private static final String BROKER_PASSWORD = AMAZON_MQ_CONFIGURATION + "/PASSWORD";
     private static final String BROKER_ENDPOINT = AMAZON_MQ_CONFIGURATION + "/ENDPOINT/OPEN-WIRE";
-    private static final String BROKER_TOPIC = AMAZON_MQ_CONFIGURATION + "/TOPIC/PUBLISH-SUBSCRIBE-ONE-WAY-CLOUD-NATIVE";
+    private static final String BROKER_TOPIC = AMAZON_MQ_CONFIGURATION + "/TOPIC/PUBLISH-SUBSCRIBE-REQUEST-RESPONSE-CLOUD-NATIVE";
 
     private MessageProducer messageProducer;
     private Session session;
 
-    public PublishSubscribeOneWayCloudNative() throws JMSException {
+    public PublishSubscribeRequestResponseCloudNative() throws JMSException {
         // we are using AWS Simple Systems Management Parameter Store to store our configuration in a central and secure place
         final Map<String, String> conf = lookupServiceConfiguration();
 
         ActiveMQSslConnectionFactory connFact = new ActiveMQSslConnectionFactory(conf.get(BROKER_ENDPOINT));
         connFact.setConnectResponseTimeout(10000);
         Connection conn = connFact.createConnection(conf.get(BROKER_USER), conf.get(BROKER_PASSWORD));
-        conn.setClientID("PublishSubscribeOneWayCloudNativeProxy");
+        conn.setClientID("PublishSubscribeRequestResponseCloudNativeProxy");
         conn.start();
         Session session = conn.createSession(false, Session.CLIENT_ACKNOWLEDGE);
 
@@ -61,6 +61,7 @@ public class PublishSubscribeOneWayCloudNative implements RequestHandler<SNSEven
                 TextMessage message = session.createTextMessage(sns.getMessage());
                 message.setJMSMessageID(sns.getMessageId());
                 message.setJMSCorrelationID(sns.getMessageAttributes().get("JMSCorrelationID").getValue());
+                message.setJMSReplyTo(session.createQueue(sns.getMessageAttributes().get("JMSReplyTo").getValue()));
                 messageProducer.send(message);
     
                 logger.log("forwarded message with correlation id: " + sns.getMessageAttributes().get("JMSCorrelationID").getValue());

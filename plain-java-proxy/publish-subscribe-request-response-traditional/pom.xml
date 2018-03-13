@@ -11,13 +11,17 @@
     </parent>
 
     <groupId>com.aws.sample.amazon-mq-integration.plain-java-proxy</groupId>
-    <artifactId>point-to-point-one-way-cloud-native</artifactId>
-    <name>amazon-mq-integration :: plain-java-proxy :: point-to-point-one-way-cloud-native</name>
+    <artifactId>publish-subscribe-request-response-traditional</artifactId>
+    <name>amazon-mq-integration :: plain-java-proxy :: publish-subscribe-request-response-traditional</name>
 
     <dependencies>
         <dependency>
             <groupId>org.apache.activemq</groupId>
             <artifactId>activemq-client</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.amazonaws</groupId>
+            <artifactId>aws-java-sdk-sns</artifactId>
         </dependency>
         <dependency>
             <groupId>com.amazonaws</groupId>
@@ -50,7 +54,7 @@
                             <transformers>
                                 <transformer
                                     implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                                    <mainClass>com.aws.sample.amazonmqintegration.plainjava.PointToPointOneWayCloudNative</mainClass>
+                                    <mainClass>com.aws.sample.amazonmqintegration.camel.Proxy</mainClass>
                                 </transformer>
                             </transformers>
                         </configuration>
